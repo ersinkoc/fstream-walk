@@ -31,8 +31,8 @@ jobs:
     - name: Run edge case tests
       run: node --test test/edge-cases.test.js
 
-  lint:
-    name: Lint Code
+  validate:
+    name: Validate Code
     runs-on: ubuntu-latest
 
     steps:
@@ -45,7 +45,19 @@ jobs:
         node-version: '20.x'
 
     - name: Check for syntax errors
-      run: node --check src/**/*.js
+      run: npm run check
+
+    - name: Validate package.json
+      run: node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
+
+    - name: Check file structure
+      run: |
+        test -f src/index.js || exit 1
+        test -f src/helpers.js || exit 1
+        test -f src/glob.js || exit 1
+        test -f src/errors.js || exit 1
+        test -f README.md || exit 1
+        test -f LICENSE || exit 1
 
   coverage:
     name: Code Coverage
@@ -63,3 +75,39 @@ jobs:
 
     - name: Run tests with coverage
       run: node --test --experimental-test-coverage test/*.test.js
+
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Run performance benchmarks
+      run: npm run bench
+
+  examples:
+    name: Test Examples
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Run examples
+      run: |
+        node examples/demo.js
+        node examples/helpers-demo.js
+        node examples/glob-demo.js
