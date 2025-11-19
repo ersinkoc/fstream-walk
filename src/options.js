@@ -5,7 +5,10 @@ export const DEFAULT_OPTIONS = {
   yieldDirectories: false, // Should we yield directory paths too?
   followSymlinks: false,   // Dangerous: follow symlinks?
   suppressErrors: true,    // Ignore EACCES/EPERM errors
-  signal: null             // AbortSignal to cancel operation
+  signal: null,            // AbortSignal to cancel operation
+  sort: null,              // Sort entries (null, 'asc', 'desc', or custom function)
+  onProgress: null,        // Progress callback function
+  withStats: false         // Include fs.Stats in yielded entries
 };
 
 /**
