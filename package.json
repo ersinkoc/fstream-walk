@@ -1,6 +1,6 @@
 {
   "name": "fstream-walk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency, memory-efficient recursive directory walker using Async Iterators.",
   "main": "src/index.js",
   "type": "module",
