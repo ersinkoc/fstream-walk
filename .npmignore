@@ -1,0 +1,39 @@
+# Tests
+test/
+*.test.js
+
+# Examples
+examples/
+
+# Benchmarks
+benchmarks/
+
+# Development files
+.github/
+.git/
+.gitignore
+
+# Documentation (except README, LICENSE, CHANGELOG)
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+tmp/
+temp/
