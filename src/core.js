@@ -39,7 +39,20 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
   }
 
   try {
+    // Collect entries for optional sorting
+    const entries = [];
     for await (const dirent of dirHandle) {
+      if (options.signal?.aborted) break;
+      entries.push(dirent);
+    }
+
+    // Apply sorting if requested
+    if (options.sort) {
+      sortEntries(entries, options.sort);
+    }
+
+    // Process sorted entries
+    for (const dirent of entries) {
       if (options.signal?.aborted) break;
 
       const entryPath = joinPath(dirPath, dirent.name);
@@ -61,14 +74,46 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
       if (isDirectory) {
         // If user wants directories yielded
         if (options.yieldDirectories && isIncluded) {
-          yield { path: entryPath, dirent, depth: currentDepth };
+          const entry = { path: entryPath, dirent, depth: currentDepth };
+
+          // Add stats if requested
+          if (options.withStats) {
+            try {
+              entry.stats = await fs.stat(entryPath);
+            } catch (e) {
+              if (!options.suppressErrors) throw e;
+            }
+          }
+
+          yield entry;
+
+          // Progress callback
+          if (options.onProgress) {
+            options.onProgress(entry);
+          }
         }
         // Recurse
         yield* walk(entryPath, options, currentDepth + 1, visited);
       } else {
         // It is a file
         if (isIncluded) {
-          yield { path: entryPath, dirent, depth: currentDepth };
+          const entry = { path: entryPath, dirent, depth: currentDepth };
+
+          // Add stats if requested
+          if (options.withStats) {
+            try {
+              entry.stats = await fs.stat(entryPath);
+            } catch (e) {
+              if (!options.suppressErrors) throw e;
+            }
+          }
+
+          yield entry;
+
+          // Progress callback
+          if (options.onProgress) {
+            options.onProgress(entry);
+          }
         }
       }
     }
@@ -94,4 +139,19 @@ function applyFilters(name, options) {
   if (options.exclude && match(name, options.exclude)) return false;
   if (options.include && !match(name, options.include)) return false;
   return true;
+}
+
+/**
+ * Sort directory entries
+ * @param {Array} entries - Array of fs.Dirent objects
+ * @param {string|Function} sortType - 'asc', 'desc', or custom comparator
+ */
+function sortEntries(entries, sortType) {
+  if (typeof sortType === 'function') {
+    entries.sort(sortType);
+  } else if (sortType === 'asc') {
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortType === 'desc') {
+    entries.sort((a, b) => b.name.localeCompare(a.name));
+  }
 }

@@ -11,9 +11,16 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test test/index.test.js",
-    "test:watch": "node --test --watch test/index.test.js",
-    "example": "node examples/demo.js"
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
+    "example": "node examples/demo.js",
+    "example:filtering": "node examples/filtering.js",
+    "example:abort": "node examples/abort-signal.js",
+    "example:advanced": "node examples/advanced-usage.js",
+    "example:features": "node examples/advanced-features.js",
+    "bench": "node benchmarks/performance.js",
+    "bench:memory": "node --expose-gc benchmarks/memory.js"
   },
   "keywords": [
     "fs",
