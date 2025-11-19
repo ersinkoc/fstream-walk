@@ -5,8 +5,25 @@
   "main": "src/index.js",
   "type": "module",
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "import": "./src/index.js",
+      "types": "./src/index.d.ts"
+    },
+    "./helpers": {
+      "import": "./src/helpers.js",
+      "types": "./src/helpers.d.ts"
+    },
+    "./glob": {
+      "import": "./src/glob.js",
+      "types": "./src/glob.d.ts"
+    },
+    "./errors": {
+      "import": "./src/errors.js",
+      "types": "./src/errors.d.ts"
+    },
+    "./package.json": "./package.json"
   },
+  "types": "src/index.d.ts",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -20,17 +37,48 @@
     "example:advanced": "node examples/advanced-usage.js",
     "example:features": "node examples/advanced-features.js",
     "bench": "node benchmarks/performance.js",
-    "bench:memory": "node --expose-gc benchmarks/memory.js"
+    "bench:memory": "node --expose-gc benchmarks/memory.js",
+    "prepublishOnly": "npm test"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ersinkoc/fstream-walk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ersinkoc/fstream-walk/issues"
+  },
+  "homepage": "https://github.com/ersinkoc/fstream-walk#readme",
   "keywords": [
     "fs",
     "walk",
+    "walker",
+    "directory",
+    "recursive",
     "stream",
     "async-iterator",
-    "recursive",
+    "async",
+    "iterator",
+    "generator",
     "zero-dependency",
-    "glob"
+    "glob",
+    "find",
+    "search",
+    "files",
+    "folders",
+    "tree",
+    "traverse",
+    "scan",
+    "memory-efficient",
+    "performance",
+    "typescript"
   ],
-  "author": "Your Name",
-  "license": "MIT"
+  "author": "fstream-walk contributors",
+  "license": "MIT",
+  "files": [
+    "src/**/*.js",
+    "src/**/*.d.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
 }
