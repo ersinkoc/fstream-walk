@@ -8,7 +8,7 @@ import walker from '../src/index.js';
 // --- Test Setup ---
 const TMP_DIR = path.join(os.tmpdir(), 'fstream-walk-edge-' + Date.now());
 
-async function createEdgeCaseStructure() {
+async function createEdgeCaseStructure(): Promise<void> {
   await fs.mkdir(TMP_DIR, { recursive: true });
 
   // Empty directory
@@ -45,7 +45,7 @@ async function createEdgeCaseStructure() {
   await fs.writeFile(path.join(mixedDir, 'config.json'), '{}');
 }
 
-async function cleanup() {
+async function cleanup(): Promise<void> {
   await fs.rm(TMP_DIR, { recursive: true, force: true });
 }
 
@@ -56,7 +56,7 @@ describe('fstream-walk edge cases', () => {
   after(async () => await cleanup());
 
   test('should handle empty directories', async () => {
-    const result = [];
+    const result: unknown[] = [];
     for await (const entry of walker(path.join(TMP_DIR, 'empty-dir'))) {
       result.push(entry);
     }
@@ -64,7 +64,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should find hidden files', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { maxDepth: 0, include: /^\./ })) {
       result.push(entry.path);
     }
@@ -73,7 +73,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should handle deep directory nesting', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { include: 'deep.txt' })) {
       result.push(entry.path);
     }
@@ -82,7 +82,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should respect maxDepth with deep nesting', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { maxDepth: 2 })) {
       result.push(entry.path);
     }
@@ -91,7 +91,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should handle files with spaces in names', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { include: 'spaces', maxDepth: 0 })) {
       result.push(entry.path);
     }
@@ -100,7 +100,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should handle files with special characters', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, {
       maxDepth: 0,
       include: /file[-_]with/
@@ -113,7 +113,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should handle multiple files with same extension', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, {
       maxDepth: 0,
       include: /^file\d+\.js$/
@@ -124,8 +124,8 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should filter with custom function', async () => {
-    const result = [];
-    const customFilter = (name) => name.startsWith('file') && name.endsWith('.js');
+    const result: string[] = [];
+    const customFilter = (name: string): boolean => name.startsWith('file') && name.endsWith('.js');
     for await (const entry of walker(TMP_DIR, {
       maxDepth: 0,
       include: customFilter
@@ -136,7 +136,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should handle both include and exclude filters together', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(path.join(TMP_DIR, 'mixed'), {
       include: /\.(js|md)$/,
       exclude: 'README'
@@ -148,7 +148,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should yield correct depth information', async () => {
-    const result = [];
+    const result: Array<{ path: string; depth: number }> = [];
     for await (const entry of walker(TMP_DIR, { maxDepth: 2 })) {
       result.push({ path: entry.path, depth: entry.depth });
     }
@@ -157,7 +157,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should handle directory with no matching files', async () => {
-    const result = [];
+    const result: unknown[] = [];
     for await (const entry of walker(path.join(TMP_DIR, 'mixed'), {
       include: /\.xyz$/ // Non-existent extension
     })) {
@@ -167,7 +167,6 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should not include directories in results by default', async () => {
-    const result = [];
     for await (const entry of walker(TMP_DIR, { maxDepth: 1 })) {
       // All results should be files, not directories
       assert.ok(entry.dirent.isFile());
@@ -175,7 +174,6 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should properly handle maxDepth of 0', async () => {
-    const result = [];
     for await (const entry of walker(TMP_DIR, { maxDepth: 0 })) {
       // Should only contain files from root level
       const relativePath = path.relative(TMP_DIR, entry.path);
@@ -184,7 +182,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should work with relative paths', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker('.', {
       maxDepth: 0,
       include: 'package.json'
@@ -195,7 +193,7 @@ describe('fstream-walk edge cases', () => {
   });
 
   test('should properly close directory handles on early exit', async () => {
-    const result = [];
+    const result: unknown[] = [];
     for await (const entry of walker(TMP_DIR)) {
       result.push(entry);
       if (result.length === 3) break; // Early exit
@@ -209,7 +207,7 @@ describe('fstream-walk edge cases', () => {
     const longPath = path.join(TMP_DIR, longName);
     await fs.writeFile(longPath, 'content');
 
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, {
       maxDepth: 0,
       include: longName

@@ -2,3 +2,5 @@ node_modules
 .DS_Store
 coverage
 test-fixtures
+dist
+dist-test

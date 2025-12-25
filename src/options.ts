@@ -1,4 +1,42 @@
-export const DEFAULT_OPTIONS = {
+import type { Dirent, Stats } from 'node:fs';
+import type { PatternType } from './utils.js';
+
+export interface WalkerEntry {
+  path: string;
+  dirent: Dirent;
+  depth: number;
+  stats?: Stats;
+}
+
+export type SortType = 'asc' | 'desc' | ((a: Dirent, b: Dirent) => number) | null;
+
+export interface WalkerOptions {
+  maxDepth: number;
+  include: PatternType;
+  exclude: PatternType;
+  yieldDirectories: boolean;
+  followSymlinks: boolean;
+  suppressErrors: boolean;
+  signal: AbortSignal | null;
+  sort: SortType;
+  onProgress: ((entry: WalkerEntry) => void) | null;
+  withStats: boolean;
+}
+
+export interface WalkerOptionsInput {
+  maxDepth?: number;
+  include?: PatternType;
+  exclude?: PatternType;
+  yieldDirectories?: boolean;
+  followSymlinks?: boolean;
+  suppressErrors?: boolean;
+  signal?: AbortSignal | null;
+  sort?: SortType;
+  onProgress?: ((entry: WalkerEntry) => void) | null;
+  withStats?: boolean;
+}
+
+export const DEFAULT_OPTIONS: WalkerOptions = {
   maxDepth: Infinity,      // How deep to recurse
   include: null,           // Filter to include (String, Regex, Fn)
   exclude: null,           // Filter to exclude (String, Regex, Fn)
@@ -13,11 +51,9 @@ export const DEFAULT_OPTIONS = {
 
 /**
  * Merges user options with defaults and validates them.
- * @param {Object} opts
- * @returns {Object}
  */
-export function sanitizeOptions(opts = {}) {
-  const merged = { ...DEFAULT_OPTIONS, ...opts };
+export function sanitizeOptions(opts: WalkerOptionsInput = {}): WalkerOptions {
+  const merged: WalkerOptions = { ...DEFAULT_OPTIONS, ...opts };
 
   // BUG-004 fixed: Validate options
 

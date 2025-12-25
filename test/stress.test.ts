@@ -7,7 +7,7 @@ import walker from '../src/index.js';
 
 const STRESS_DIR = path.join(os.tmpdir(), 'fstream-stress-' + Date.now());
 
-async function createLargeStructure(numDirs = 50, filesPerDir = 100) {
+async function createLargeStructure(numDirs = 50, filesPerDir = 100): Promise<void> {
   await fs.mkdir(STRESS_DIR, { recursive: true });
 
   for (let i = 0; i < numDirs; i++) {
@@ -23,10 +23,10 @@ async function createLargeStructure(numDirs = 50, filesPerDir = 100) {
   }
 }
 
-async function cleanup() {
+async function cleanup(): Promise<void> {
   try {
     await fs.rm(STRESS_DIR, { recursive: true, force: true });
-  } catch (err) {
+  } catch {
     // Ignore cleanup errors
   }
 }
@@ -39,7 +39,7 @@ describe('Stress Tests', () => {
     const startMem = process.memoryUsage().heapUsed;
 
     let count = 0;
-    for await (const file of walker(STRESS_DIR)) {
+    for await (const _file of walker(STRESS_DIR)) {
       count++;
     }
 
@@ -67,7 +67,7 @@ describe('Stress Tests', () => {
     await fs.writeFile(path.join(currentPath, 'deep.txt'), 'very deep');
 
     let count = 0;
-    for await (const file of walker(STRESS_DIR)) {
+    for await (const _file of walker(STRESS_DIR)) {
       count++;
     }
 
@@ -82,7 +82,7 @@ describe('Stress Tests', () => {
     const controller = new AbortController();
     let count = 0;
 
-    for await (const file of walker(STRESS_DIR, { signal: controller.signal })) {
+    for await (const _file of walker(STRESS_DIR, { signal: controller.signal })) {
       count++;
       if (count >= 100) {
         controller.abort();
@@ -97,9 +97,9 @@ describe('Stress Tests', () => {
   test('should maintain constant memory with sorting disabled', async () => {
     await createLargeStructure(50, 100);
 
-    const memSamples = [];
+    const memSamples: number[] = [];
 
-    for await (const file of walker(STRESS_DIR)) {
+    for await (const _file of walker(STRESS_DIR)) {
       if (Math.random() < 0.01) { // Sample 1% of files
         memSamples.push(process.memoryUsage().heapUsed);
       }

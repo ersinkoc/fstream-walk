@@ -1,5 +1,5 @@
-import walker from '../src/index.js';
-import { matchGlob, createGlobFilter, patterns } from '../src/glob.js';
+import walker from '../dist/index.js';
+import { matchGlob, createGlobFilter, patterns } from '../dist/glob.js';
 
 console.log('=== Glob Pattern Demo ===\n');
 

@@ -1,33 +1,36 @@
 import walker from './index.js';
 import path from 'node:path';
+import fs from 'node:fs/promises';
+import type { WalkerOptionsInput } from './options.js';
 
 /**
  * Find files matching a pattern
  * Returns an array of all matching file paths
  *
- * @param {string} dirPath - Directory to search
- * @param {Object} options - Walker options
- * @returns {Promise<string[]>} Array of file paths
- *
  * @example
  * const jsFiles = await findFiles('./src', { include: /\.js$/ });
  * console.log(jsFiles); // ['./src/index.js', './src/core.js', ...]
  */
-export async function findFiles(dirPath, options = {}) {
-  const files = [];
+export async function findFiles(dirPath: string, options: WalkerOptionsInput = {}): Promise<string[]> {
+  const files: string[] = [];
   for await (const entry of walker(dirPath, options)) {
     files.push(entry.path);
   }
   return files;
 }
 
+export interface CountFilesOptions extends WalkerOptionsInput {
+  byExtension?: boolean;
+}
+
+export interface ExtensionBreakdown {
+  [extension: string]: number;
+  total: number;
+}
+
 /**
  * Count files in a directory
  * Returns the total count and optional breakdown by extension
- *
- * @param {string} dirPath - Directory to count
- * @param {Object} options - Walker options + { byExtension: boolean }
- * @returns {Promise<number|Object>} Count or object with breakdown
  *
  * @example
  * const count = await countFiles('./src');
@@ -36,11 +39,11 @@ export async function findFiles(dirPath, options = {}) {
  * const breakdown = await countFiles('./src', { byExtension: true });
  * console.log(breakdown); // { '.js': 10, '.ts': 5, total: 15 }
  */
-export async function countFiles(dirPath, options = {}) {
+export async function countFiles(dirPath: string, options: CountFilesOptions = {}): Promise<number | ExtensionBreakdown> {
   const { byExtension, ...walkerOptions } = options;
 
   if (byExtension) {
-    const counts = { total: 0 };
+    const counts: ExtensionBreakdown = { total: 0 };
     for await (const entry of walker(dirPath, walkerOptions)) {
       const ext = path.extname(entry.path) || '[no extension]';
       counts[ext] = (counts[ext] || 0) + 1;
@@ -50,24 +53,28 @@ export async function countFiles(dirPath, options = {}) {
   }
 
   let count = 0;
-  for await (const entry of walker(dirPath, walkerOptions)) {
+  for await (const _entry of walker(dirPath, walkerOptions)) {
     count++;
   }
   return count;
 }
 
+export interface SizeResult {
+  totalSize: number;
+  fileCount: number;
+  averageSize: number;
+  totalSizeKB: string;
+  totalSizeMB: string;
+}
+
 /**
  * Calculate total size of all files in a directory
- *
- * @param {string} dirPath - Directory to analyze
- * @param {Object} options - Walker options
- * @returns {Promise<Object>} Size information
  *
  * @example
  * const { totalSize, fileCount, averageSize } = await calculateSize('./src');
  * console.log(`Total: ${totalSize} bytes across ${fileCount} files`);
  */
-export async function calculateSize(dirPath, options = {}) {
+export async function calculateSize(dirPath: string, options: WalkerOptionsInput = {}): Promise<SizeResult> {
   let totalSize = 0;
   let fileCount = 0;
 
@@ -87,20 +94,27 @@ export async function calculateSize(dirPath, options = {}) {
   };
 }
 
+export interface LargestFilesOptions extends WalkerOptionsInput {
+  limit?: number;
+}
+
+export interface FileInfo {
+  path: string;
+  size: number;
+  sizeKB: string;
+  modified: Date;
+}
+
 /**
  * Get largest files in a directory
- *
- * @param {string} dirPath - Directory to search
- * @param {Object} options - Walker options + { limit: number }
- * @returns {Promise<Array>} Array of {path, size} objects
  *
  * @example
  * const largest = await getLargestFiles('./src', { limit: 10 });
  * largest.forEach(f => console.log(`${f.path}: ${f.size} bytes`));
  */
-export async function getLargestFiles(dirPath, options = {}) {
+export async function getLargestFiles(dirPath: string, options: LargestFilesOptions = {}): Promise<FileInfo[]> {
   const { limit = 10, ...walkerOptions } = options;
-  const files = [];
+  const files: FileInfo[] = [];
 
   for await (const entry of walker(dirPath, { ...walkerOptions, withStats: true })) {
     if (entry.stats) {
@@ -118,21 +132,26 @@ export async function getLargestFiles(dirPath, options = {}) {
     .slice(0, limit);
 }
 
+export interface RecentFileInfo {
+  path: string;
+  modified: Date;
+  size: number;
+}
+
 /**
  * Find files modified after a specific date
- *
- * @param {string} dirPath - Directory to search
- * @param {Date|number} sinceDate - Date or timestamp
- * @param {Object} options - Walker options
- * @returns {Promise<Array>} Array of matching files
  *
  * @example
  * const yesterday = Date.now() - 24 * 60 * 60 * 1000;
  * const recent = await findRecentFiles('./src', yesterday);
  */
-export async function findRecentFiles(dirPath, sinceDate, options = {}) {
+export async function findRecentFiles(
+  dirPath: string,
+  sinceDate: Date | number,
+  options: WalkerOptionsInput = {}
+): Promise<RecentFileInfo[]> {
   const timestamp = sinceDate instanceof Date ? sinceDate.getTime() : sinceDate;
-  const files = [];
+  const files: RecentFileInfo[] = [];
 
   for await (const entry of walker(dirPath, { ...options, withStats: true })) {
     if (entry.stats && entry.stats.mtime.getTime() > timestamp) {
@@ -144,28 +163,28 @@ export async function findRecentFiles(dirPath, sinceDate, options = {}) {
     }
   }
 
-  return files.sort((a, b) => b.modified - a.modified);
+  return files.sort((a, b) => b.modified.getTime() - a.modified.getTime());
+}
+
+export interface TreeNode {
+  [key: string]: TreeNode | null;
 }
 
 /**
  * Build a directory tree structure
  *
- * @param {string} dirPath - Root directory
- * @param {Object} options - Walker options
- * @returns {Promise<Object>} Nested tree object
- *
  * @example
  * const tree = await buildTree('./src');
  * console.log(JSON.stringify(tree, null, 2));
  */
-export async function buildTree(dirPath, options = {}) {
-  const tree = {};
+export async function buildTree(dirPath: string, options: WalkerOptionsInput = {}): Promise<TreeNode> {
+  const tree: TreeNode = {};
 
   for await (const entry of walker(dirPath, { ...options, yieldDirectories: true })) {
     const relativePath = path.relative(dirPath, entry.path);
     const parts = relativePath.split(path.sep);
 
-    let current = tree;
+    let current: TreeNode = tree;
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       if (i === parts.length - 1) {
@@ -174,7 +193,7 @@ export async function buildTree(dirPath, options = {}) {
       } else {
         // Branch node
         if (!current[part]) current[part] = {};
-        current = current[part];
+        current = current[part] as TreeNode;
       }
     }
   }
@@ -182,12 +201,12 @@ export async function buildTree(dirPath, options = {}) {
   return tree;
 }
 
+export interface DuplicateFiles {
+  [filename: string]: string[];
+}
+
 /**
  * Find duplicate files by name (ignoring path)
- *
- * @param {string} dirPath - Directory to search
- * @param {Object} options - Walker options
- * @returns {Promise<Object>} Map of filename to array of paths
  *
  * @example
  * const dupes = await findDuplicateNames('./src');
@@ -197,8 +216,8 @@ export async function buildTree(dirPath, options = {}) {
  *   }
  * });
  */
-export async function findDuplicateNames(dirPath, options = {}) {
-  const filesByName = {};
+export async function findDuplicateNames(dirPath: string, options: WalkerOptionsInput = {}): Promise<DuplicateFiles> {
+  const filesByName: { [filename: string]: string[] } = {};
 
   for await (const entry of walker(dirPath, options)) {
     const filename = path.basename(entry.path);
@@ -209,7 +228,7 @@ export async function findDuplicateNames(dirPath, options = {}) {
   }
 
   // Filter to only duplicates
-  const duplicates = {};
+  const duplicates: DuplicateFiles = {};
   for (const [name, paths] of Object.entries(filesByName)) {
     if (paths.length > 1) {
       duplicates[name] = paths;
@@ -219,31 +238,40 @@ export async function findDuplicateNames(dirPath, options = {}) {
   return duplicates;
 }
 
+export interface SearchMatch {
+  text: string;
+  index: number;
+  line: number;
+}
+
+export interface SearchResult {
+  path: string;
+  matches: SearchMatch[];
+}
+
 /**
  * Search file contents for a pattern
  * Note: This reads files into memory, use carefully with large files
- *
- * @param {string} dirPath - Directory to search
- * @param {string|RegExp} pattern - Pattern to search for
- * @param {Object} options - Walker options
- * @returns {Promise<Array>} Array of {path, matches} objects
  *
  * @example
  * const matches = await searchInFiles('./src', /TODO:/);
  * matches.forEach(m => console.log(`${m.path}: ${m.matches.length} matches`));
  */
-export async function searchInFiles(dirPath, pattern, options = {}) {
-  const fs = await import('node:fs/promises');
-  const results = [];
+export async function searchInFiles(
+  dirPath: string,
+  pattern: string | RegExp,
+  options: WalkerOptionsInput = {}
+): Promise<SearchResult[]> {
+  const results: SearchResult[] = [];
   // BUG-003 fixed: Ensure regex always has global flag for matchAll()
-  let regex;
+  let regex: RegExp;
   if (typeof pattern === 'string') {
     regex = new RegExp(pattern, 'g');
   } else if (pattern instanceof RegExp) {
     // If RegExp doesn't have global flag, create a new one with global flag
     regex = pattern.global ? pattern : new RegExp(pattern.source, pattern.flags + 'g');
   } else {
-    regex = pattern;
+    regex = pattern as RegExp;
   }
 
   for await (const entry of walker(dirPath, options)) {
@@ -254,7 +282,7 @@ export async function searchInFiles(dirPath, pattern, options = {}) {
       if (matches.length > 0) {
         // BUG-008 fixed: Calculate line numbers efficiently
         // Instead of recalculating for each match, build a line index map
-        const lineStarts = [0];
+        const lineStarts: number[] = [0];
         for (let i = 0; i < content.length; i++) {
           if (content[i] === '\n') {
             lineStarts.push(i + 1);
@@ -266,8 +294,9 @@ export async function searchInFiles(dirPath, pattern, options = {}) {
           matches: matches.map(m => {
             // Binary search to find line number
             let line = 1;
+            const matchIndex = m.index ?? 0;
             for (let i = 0; i < lineStarts.length; i++) {
-              if (lineStarts[i] > m.index) {
+              if (lineStarts[i] > matchIndex) {
                 line = i;
                 break;
               }
@@ -276,7 +305,7 @@ export async function searchInFiles(dirPath, pattern, options = {}) {
 
             return {
               text: m[0],
-              index: m.index,
+              index: matchIndex,
               line: line
             };
           })
@@ -295,17 +324,12 @@ export async function searchInFiles(dirPath, pattern, options = {}) {
 /**
  * Find empty directories
  *
- * @param {string} dirPath - Root directory to search
- * @param {Object} options - Walker options
- * @returns {Promise<string[]>} Array of empty directory paths
- *
  * @example
  * const empty = await findEmptyDirectories('./src');
  * console.log('Empty directories:', empty);
  */
-export async function findEmptyDirectories(dirPath, options = {}) {
-  const fs = await import('node:fs/promises');
-  const emptyDirs = [];
+export async function findEmptyDirectories(dirPath: string, options: WalkerOptionsInput = {}): Promise<string[]> {
+  const emptyDirs: string[] = [];
 
   for await (const entry of walker(dirPath, { ...options, yieldDirectories: true })) {
     if (entry.dirent.isDirectory()) {
@@ -325,19 +349,19 @@ export async function findEmptyDirectories(dirPath, options = {}) {
   return emptyDirs;
 }
 
+export interface GroupedFiles {
+  [extension: string]: string[];
+}
+
 /**
  * Group files by extension
- *
- * @param {string} dirPath - Directory to analyze
- * @param {Object} options - Walker options
- * @returns {Promise<Object>} Map of extension to array of paths
  *
  * @example
  * const byExt = await groupByExtension('./src');
  * console.log('JS files:', byExt['.js'].length);
  */
-export async function groupByExtension(dirPath, options = {}) {
-  const groups = {};
+export async function groupByExtension(dirPath: string, options: WalkerOptionsInput = {}): Promise<GroupedFiles> {
+  const groups: GroupedFiles = {};
 
   for await (const entry of walker(dirPath, options)) {
     const ext = path.extname(entry.path) || '[no extension]';

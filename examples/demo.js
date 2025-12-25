@@ -1,4 +1,4 @@
-import walker from '../src/index.js';
+import walker from '../dist/index.js';
 
 console.log('=== Demo: fstream-walk ===\n');
 

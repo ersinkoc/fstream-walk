@@ -1,4 +1,4 @@
-import walker from '../src/index.js';
+import walker from '../dist/index.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
