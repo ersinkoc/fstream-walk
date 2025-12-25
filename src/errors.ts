@@ -2,11 +2,19 @@
  * Custom error classes for fstream-walk
  */
 
+export interface FStreamWalkErrorOptions {
+  code?: string;
+  path?: string;
+}
+
 /**
  * Base error class for all fstream-walk errors
  */
 export class FStreamWalkError extends Error {
-  constructor(message, options = {}) {
+  code?: string;
+  path?: string;
+
+  constructor(message: string, options: FStreamWalkErrorOptions = {}) {
     super(message);
     this.name = 'FStreamWalkError';
     this.code = options.code;
@@ -23,7 +31,7 @@ export class FStreamWalkError extends Error {
  * Permission denied error
  */
 export class PermissionError extends FStreamWalkError {
-  constructor(message, path) {
+  constructor(message: string, path: string) {
     super(message, { code: 'EACCES', path });
     this.name = 'PermissionError';
   }
@@ -33,7 +41,7 @@ export class PermissionError extends FStreamWalkError {
  * Path not found error
  */
 export class PathNotFoundError extends FStreamWalkError {
-  constructor(message, path) {
+  constructor(message: string, path: string) {
     super(message, { code: 'ENOENT', path });
     this.name = 'PathNotFoundError';
   }
@@ -43,7 +51,7 @@ export class PathNotFoundError extends FStreamWalkError {
  * Invalid path error
  */
 export class InvalidPathError extends FStreamWalkError {
-  constructor(message, path) {
+  constructor(message: string, path: string) {
     super(message, { code: 'EINVAL', path });
     this.name = 'InvalidPathError';
   }
@@ -53,7 +61,7 @@ export class InvalidPathError extends FStreamWalkError {
  * Symlink loop error
  */
 export class SymlinkLoopError extends FStreamWalkError {
-  constructor(message, path) {
+  constructor(message: string, path: string) {
     super(message, { code: 'ELOOP', path });
     this.name = 'SymlinkLoopError';
   }
@@ -73,17 +81,23 @@ export class AbortError extends FStreamWalkError {
  * Max depth exceeded error
  */
 export class MaxDepthError extends FStreamWalkError {
-  constructor(depth, path) {
+  depth: number;
+
+  constructor(depth: number, path: string) {
     super(`Maximum depth ${depth} exceeded at ${path}`, { code: 'EMAXDEPTH', path });
     this.name = 'MaxDepthError';
     this.depth = depth;
   }
 }
 
+interface SystemError extends Error {
+  code?: string;
+}
+
 /**
  * Convert system errors to fstream-walk errors
  */
-export function wrapError(err, path) {
+export function wrapError(err: SystemError, path: string): FStreamWalkError {
   if (err instanceof FStreamWalkError) {
     return err;
   }
@@ -122,10 +136,14 @@ export function wrapError(err, path) {
   }
 }
 
+export interface SuppressErrorOptions {
+  suppressErrors?: boolean;
+}
+
 /**
  * Check if error should be suppressed
  */
-export function shouldSuppressError(err, options = {}) {
+export function shouldSuppressError(err: SystemError, options: SuppressErrorOptions = {}): boolean {
   const { suppressErrors = true } = options;
 
   if (!suppressErrors) {

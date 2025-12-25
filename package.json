@@ -2,53 +2,58 @@
   "name": "fstream-walk",
   "version": "1.0.1",
   "description": "Zero-dependency, memory-efficient recursive directory walker using Async Iterators.",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/index.js",
-      "types": "./src/index.d.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./helpers": {
-      "import": "./src/helpers.js",
-      "types": "./src/helpers.d.ts"
+      "import": "./dist/helpers.js",
+      "types": "./dist/helpers.d.ts"
     },
     "./glob": {
-      "import": "./src/glob.js",
-      "types": "./src/glob.d.ts"
+      "import": "./dist/glob.js",
+      "types": "./dist/glob.d.ts"
     },
     "./errors": {
-      "import": "./src/errors.js",
-      "types": "./src/errors.d.ts"
+      "import": "./dist/errors.js",
+      "types": "./dist/errors.d.ts"
     },
     "./package.json": "./package.json"
   },
-  "types": "src/index.d.ts",
+  "types": "dist/index.d.ts",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test test/*.test.js",
-    "test:watch": "node --test --watch test/*.test.js",
-    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
-    "test:unit": "node --test test/index.test.js test/edge-cases.test.js",
-    "test:helpers": "node --test test/helpers.test.js",
-    "test:glob": "node --test test/glob.test.js",
-    "test:stress": "node --test test/stress.test.js",
-    "example": "node examples/demo.js",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist dist-test",
+    "prebuild": "npm run clean",
+    "test": "npm run build:test && node --test dist-test/test/*.test.js",
+    "test:watch": "tsc -p tsconfig.test.json --watch",
+    "test:coverage": "npm run build:test && node --test --experimental-test-coverage dist-test/test/*.test.js",
+    "test:unit": "npm run build:test && node --test dist-test/test/index.test.js dist-test/test/edge-cases.test.js",
+    "test:helpers": "npm run build:test && node --test dist-test/test/helpers.test.js",
+    "test:glob": "npm run build:test && node --test dist-test/test/glob.test.js",
+    "test:stress": "npm run build:test && node --test dist-test/test/stress.test.js",
+    "build:test": "tsc -p tsconfig.test.json",
+    "example": "npm run build && node examples/demo.js",
     "example:all": "npm run example && npm run example:filtering && npm run example:features",
-    "example:filtering": "node examples/filtering.js",
-    "example:abort": "node examples/abort-signal.js",
-    "example:advanced": "node examples/advanced-usage.js",
-    "example:features": "node examples/advanced-features.js",
-    "example:helpers": "node examples/helpers-demo.js",
-    "example:glob": "node examples/glob-demo.js",
-    "bench": "node benchmarks/performance.js",
-    "bench:memory": "node --expose-gc benchmarks/memory.js",
+    "example:filtering": "npm run build && node examples/filtering.js",
+    "example:abort": "npm run build && node examples/abort-signal.js",
+    "example:advanced": "npm run build && node examples/advanced-usage.js",
+    "example:features": "npm run build && node examples/advanced-features.js",
+    "example:helpers": "npm run build && node examples/helpers-demo.js",
+    "example:glob": "npm run build && node examples/glob-demo.js",
+    "bench": "npm run build && node benchmarks/performance.js",
+    "bench:memory": "npm run build && node --expose-gc benchmarks/memory.js",
     "bench:all": "npm run bench && npm run bench:memory",
-    "check": "node scripts/check-syntax.js",
-    "validate": "npm test",
-    "prepublishOnly": "npm run validate",
+    "check": "tsc --noEmit",
+    "validate": "npm run check && npm run build:test && node --test dist-test/test/*.test.js",
+    "prepublishOnly": "npm run validate && npm run build",
     "preversion": "npm run validate",
     "postversion": "git push && git push --tags"
   },
@@ -87,10 +92,16 @@
   "author": "fstream-walk contributors",
   "license": "MIT",
   "files": [
-    "src/**/*.js",
-    "src/**/*.d.ts",
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts.map",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.10.0"
+  }
 }

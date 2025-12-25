@@ -1,15 +1,17 @@
 import fs from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 import { joinPath, match } from './utils.js';
+import type { WalkerOptions, WalkerEntry } from './options.js';
 
 /**
  * Recursive Directory Walker Generator
- *
- * @param {string} dirPath
- * @param {Object} options
- * @param {number} currentDepth
- * @param {Set} visited - To prevent symlink loops
  */
-export async function* walk(dirPath, options, currentDepth = 0, visited = new Set()) {
+export async function* walk(
+  dirPath: string,
+  options: WalkerOptions,
+  currentDepth = 0,
+  visited: Set<string> = new Set()
+): AsyncGenerator<WalkerEntry, void, undefined> {
   // 1. Abort Check
   if (options.signal?.aborted) return;
 
@@ -33,7 +35,7 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
     }
   }
 
-  let dirHandle;
+  let dirHandle: Awaited<ReturnType<typeof fs.opendir>> | null = null;
   try {
     // opendir returns an AsyncIterable Dir object.
     // It buffers very little memory compared to readdir.
@@ -46,19 +48,20 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
   try {
     // BUG-001 fixed: Only collect entries into array if sorting is needed
     // This saves memory for large directories when sorting is disabled
-    let entries;
+    let entries: Dirent[] | AsyncIterable<Dirent>;
     if (options.sort) {
       // Collect all entries for sorting
-      entries = [];
+      const entriesArray: Dirent[] = [];
       for await (const dirent of dirHandle) {
         if (options.signal?.aborted) break;
-        entries.push(dirent);
+        entriesArray.push(dirent);
       }
-      sortEntries(entries, options.sort);
+      sortEntries(entriesArray, options.sort);
+      entries = entriesArray;
     } else {
       // For non-sorted iteration, create an async iterable wrapper
       entries = {
-        [Symbol.asyncIterator]: () => dirHandle[Symbol.asyncIterator]()
+        [Symbol.asyncIterator]: () => dirHandle![Symbol.asyncIterator]()
       };
     }
 
@@ -75,7 +78,7 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
         try {
           const stats = await fs.stat(entryPath);
           isDirectory = stats.isDirectory();
-        } catch (e) {
+        } catch {
           isDirectory = false; // Broken link
         }
       }
@@ -85,7 +88,7 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
       if (isDirectory) {
         // If user wants directories yielded
         if (options.yieldDirectories && isIncluded) {
-          const entry = { path: entryPath, dirent, depth: currentDepth };
+          const entry: WalkerEntry = { path: entryPath, dirent, depth: currentDepth };
 
           // Add stats if requested
           if (options.withStats) {
@@ -108,7 +111,7 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
       } else {
         // It is a file
         if (isIncluded) {
-          const entry = { path: entryPath, dirent, depth: currentDepth };
+          const entry: WalkerEntry = { path: entryPath, dirent, depth: currentDepth };
 
           // Add stats if requested
           if (options.withStats) {
@@ -136,7 +139,7 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
     if (dirHandle) {
       try {
         await dirHandle.close();
-      } catch (e) {
+      } catch {
         // Ignore errors if already closed
       }
     }
@@ -146,7 +149,7 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
 /**
  * Logic for include/exclude precedence
  */
-function applyFilters(name, options) {
+function applyFilters(name: string, options: WalkerOptions): boolean {
   if (options.exclude && match(name, options.exclude)) return false;
   if (options.include && !match(name, options.include)) return false;
   return true;
@@ -154,10 +157,8 @@ function applyFilters(name, options) {
 
 /**
  * Sort directory entries
- * @param {Array} entries - Array of fs.Dirent objects
- * @param {string|Function} sortType - 'asc', 'desc', or custom comparator
  */
-function sortEntries(entries, sortType) {
+function sortEntries(entries: Dirent[], sortType: NonNullable<WalkerOptions['sort']>): void {
   if (typeof sortType === 'function') {
     entries.sort(sortType);
   } else if (sortType === 'asc') {

@@ -5,10 +5,8 @@
 
 /**
  * Convert glob pattern to regex
- * @param {string} pattern - Glob pattern
- * @returns {RegExp} Regular expression
  */
-export function globToRegex(pattern) {
+export function globToRegex(pattern: string): RegExp {
   let regexStr = '^';
   let i = 0;
 
@@ -39,7 +37,7 @@ export function globToRegex(pattern) {
         i++;
         break;
 
-      case '[':
+      case '[': {
         // [...] character class
         const closeIdx = pattern.indexOf(']', i);
         if (closeIdx === -1) {
@@ -55,8 +53,9 @@ export function globToRegex(pattern) {
           i = closeIdx + 1;
         }
         break;
+      }
 
-      case '{':
+      case '{': {
         // {...} alternation
         const closeBrace = pattern.indexOf('}', i);
         if (closeBrace === -1) {
@@ -70,6 +69,7 @@ export function globToRegex(pattern) {
           i = closeBrace + 1;
         }
         break;
+      }
 
       case '/':
       case '.':
@@ -95,14 +95,16 @@ export function globToRegex(pattern) {
   return new RegExp(regexStr);
 }
 
+export interface MatchGlobOptions {
+  dot?: boolean;       // Include dotfiles
+  nocase?: boolean;    // Case insensitive
+  matchBase?: boolean; // Match basename only
+}
+
 /**
  * Match a path against a glob pattern
- * @param {string} filePath - File path to test
- * @param {string|string[]} patterns - Glob pattern(s)
- * @param {Object} options - Match options
- * @returns {boolean}
  */
-export function matchGlob(filePath, patterns, options = {}) {
+export function matchGlob(filePath: string, patterns: string | string[], options: MatchGlobOptions = {}): boolean {
   const {
     dot = false,           // Include dotfiles
     nocase = false,        // Case insensitive
@@ -138,7 +140,7 @@ export function matchGlob(filePath, patterns, options = {}) {
     // - If matchBase is true, always use basename
     // - If pattern has wildcard/special chars but no '/', test against basename
     // - Otherwise test full path
-    let testPath = normalizedPath;
+    let testPath: string | undefined = normalizedPath;
     const hasWildcard = /[*?[\]{]/.test(normalizedPattern);
 
     if (matchBase) {
@@ -147,7 +149,7 @@ export function matchGlob(filePath, patterns, options = {}) {
       testPath = basename;
     }
 
-    if (testRegex.test(testPath)) {
+    if (testPath && testRegex.test(testPath)) {
       return true;
     }
   }
@@ -157,13 +159,13 @@ export function matchGlob(filePath, patterns, options = {}) {
 
 /**
  * Create a filter function from glob patterns
- * @param {string|string[]} include - Include patterns
- * @param {string|string[]} exclude - Exclude patterns
- * @param {Object} options - Match options
- * @returns {Function} Filter function
  */
-export function createGlobFilter(include, exclude, options = {}) {
-  return (filePath) => {
+export function createGlobFilter(
+  include: string | string[] | null | undefined,
+  exclude: string | string[] | null | undefined,
+  options: MatchGlobOptions = {}
+): (filePath: string) => boolean {
+  return (filePath: string): boolean => {
     // Check exclude first
     if (exclude && matchGlob(filePath, exclude, options)) {
       return false;
@@ -190,4 +192,4 @@ export const patterns = {
   nodeModules: '**/node_modules/**',
   dotfiles: '**/.*',
   tests: ['**/*.test.{js,ts}', '**/*.spec.{js,ts}', '**/__tests__/**']
-};
+} as const;

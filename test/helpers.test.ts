@@ -13,10 +13,11 @@ import {
   findDuplicateNames,
   groupByExtension
 } from '../src/helpers.js';
+import type { ExtensionBreakdown } from '../src/helpers.js';
 
 const TMP_DIR = path.join(os.tmpdir(), 'fstream-helpers-test-' + Date.now());
 
-async function createTestStructure() {
+async function createTestStructure(): Promise<void> {
   await fs.mkdir(TMP_DIR, { recursive: true });
 
   // Create test files
@@ -30,7 +31,7 @@ async function createTestStructure() {
   await fs.writeFile(path.join(subDir, 'readme.md'), 'readme content');
 }
 
-async function cleanup() {
+async function cleanup(): Promise<void> {
   await fs.rm(TMP_DIR, { recursive: true, force: true });
 }
 
@@ -56,7 +57,7 @@ describe('Helper Functions', () => {
   });
 
   test('countFiles with byExtension should return breakdown', async () => {
-    const breakdown = await countFiles(TMP_DIR, { byExtension: true });
+    const breakdown = await countFiles(TMP_DIR, { byExtension: true }) as ExtensionBreakdown;
     assert.strictEqual(breakdown['.js'], 3);
     assert.strictEqual(breakdown['.txt'], 1);
     assert.strictEqual(breakdown['.md'], 1);

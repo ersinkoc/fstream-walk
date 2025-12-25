@@ -14,16 +14,16 @@ import { match } from '../src/utils.js';
 import { sanitizeOptions } from '../src/options.js';
 
 describe('Bug Fixes', () => {
-  let testDir;
+  let testDir: string;
 
   // Setup: Create a temporary test directory before each test
-  async function setupTestDir() {
+  async function setupTestDir(): Promise<string> {
     testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fstream-bug-test-'));
     return testDir;
   }
 
   // Cleanup: Remove test directory after each test
-  async function cleanupTestDir() {
+  async function cleanupTestDir(): Promise<void> {
     if (testDir) {
       await fs.rm(testDir, { recursive: true, force: true });
     }
@@ -99,7 +99,7 @@ describe('Bug Fixes', () => {
 
       // Simulate realpath failure by using a restricted path
       // Walk with followSymlinks=true and suppressErrors=true
-      const files = [];
+      const files: string[] = [];
       let count = 0;
       const maxIterations = 1000; // Safety limit
 
@@ -157,7 +157,7 @@ describe('Bug Fixes', () => {
 
   test('BUG-004: should validate maxDepth - reject non-numeric values', async () => {
     assert.throws(() => {
-      sanitizeOptions({ maxDepth: 'hello' });
+      sanitizeOptions({ maxDepth: 'hello' as unknown as number });
     }, {
       name: 'Error',
       message: /maxDepth must be a non-negative number or Infinity/
@@ -177,21 +177,21 @@ describe('Bug Fixes', () => {
   test('BUG-005: match() should reject invalid pattern types', async () => {
     // After fix, these should throw errors
     assert.throws(() => {
-      match('test.js', 123);
+      match('test.js', 123 as unknown as string);
     }, {
       name: 'TypeError',
       message: /Pattern must be a string, RegExp, function, null, or undefined/
     });
 
     assert.throws(() => {
-      match('test.js', {});
+      match('test.js', {} as unknown as string);
     }, {
       name: 'TypeError',
       message: /Pattern must be a string, RegExp, function, null, or undefined/
     });
 
     assert.throws(() => {
-      match('test.js', ['*.js']);
+      match('test.js', ['*.js'] as unknown as string);
     }, {
       name: 'TypeError',
       message: /Pattern must be a string, RegExp, function, null, or undefined/
@@ -217,8 +217,8 @@ describe('Bug Fixes', () => {
 
     // After fix, these should throw or return false:
     // false, 0, '' should not be treated as "match all"
-    assert.throws(() => match('file.js', false));
-    assert.throws(() => match('file.js', 0));
+    assert.throws(() => match('file.js', false as unknown as string));
+    assert.throws(() => match('file.js', 0 as unknown as string));
     assert.throws(() => match('file.js', ''));
   });
 
@@ -228,14 +228,14 @@ describe('Bug Fixes', () => {
   test('BUG-007: should validate sort option', async () => {
     // After fix, invalid sort options should throw
     assert.throws(() => {
-      sanitizeOptions({ sort: 'invalid' });
+      sanitizeOptions({ sort: 'invalid' as unknown as 'asc' });
     }, {
       name: 'Error',
       message: /sort must be 'asc', 'desc', a function, or null/
     });
 
     assert.throws(() => {
-      sanitizeOptions({ sort: 123 });
+      sanitizeOptions({ sort: 123 as unknown as 'asc' });
     }, {
       name: 'Error',
       message: /sort must be 'asc', 'desc', a function, or null/
@@ -263,7 +263,7 @@ describe('Bug Fixes', () => {
       // Track memory usage (rough check)
       const memBefore = process.memoryUsage().heapUsed;
 
-      const files = [];
+      const files: string[] = [];
       for await (const file of walker(testDir, { sort: null })) {
         files.push(file.path);
       }

@@ -5,14 +5,16 @@ import path from 'node:path';
  */
 export const joinPath = path.join;
 
+export type PatternType = string | RegExp | ((fileName: string) => boolean) | null | undefined;
+
 /**
  * Checks if a filename matches a pattern.
  *
- * @param {string} fileName - The name of the file (not full path)
- * @param {string|RegExp|Function} pattern - The rule to match against
- * @returns {boolean}
+ * @param fileName - The name of the file (not full path)
+ * @param pattern - The rule to match against
+ * @returns boolean
  */
-export function match(fileName, pattern) {
+export function match(fileName: string, pattern: PatternType): boolean {
   // BUG-006 fixed: Only treat null and undefined as "match all"
   if (pattern === null || pattern === undefined) return true;
 

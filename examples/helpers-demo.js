@@ -6,7 +6,7 @@ import {
   buildTree,
   findDuplicateNames,
   groupByExtension
-} from '../src/helpers.js';
+} from '../dist/helpers.js';
 
 console.log('=== Helper Functions Demo ===\n');
 

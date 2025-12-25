@@ -8,7 +8,7 @@ import walker from '../src/index.js';
 // --- Test Setup ---
 const TMP_DIR = path.join(os.tmpdir(), 'fstream-walk-test-' + Date.now());
 
-async function createStructure() {
+async function createStructure(): Promise<void> {
   await fs.mkdir(TMP_DIR, { recursive: true });
   await fs.writeFile(path.join(TMP_DIR, 'root.txt'), 'content');
   await fs.writeFile(path.join(TMP_DIR, 'image.png'), 'content');
@@ -23,7 +23,7 @@ async function createStructure() {
   await fs.writeFile(path.join(sub2, 'level2.js'), 'content');
 }
 
-async function cleanup() {
+async function cleanup(): Promise<void> {
   await fs.rm(TMP_DIR, { recursive: true, force: true });
 }
 
@@ -35,7 +35,7 @@ describe('fstream-walk', () => {
   after(async () => await cleanup());
 
   test('should list all files recursively by default', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR)) {
       result.push(entry.path);
     }
@@ -44,7 +44,7 @@ describe('fstream-walk', () => {
   });
 
   test('should respect maxDepth', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { maxDepth: 0 })) {
       result.push(entry.path);
     }
@@ -55,7 +55,7 @@ describe('fstream-walk', () => {
   });
 
   test('should filter with include (RegExp)', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { include: /\.js$/ })) {
       result.push(entry.path);
     }
@@ -64,7 +64,7 @@ describe('fstream-walk', () => {
   });
 
   test('should filter with exclude (String)', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { exclude: 'ignored' })) {
       result.push(entry.path);
     }
@@ -73,7 +73,7 @@ describe('fstream-walk', () => {
   });
 
   test('should yield directories when requested', async () => {
-    const result = [];
+    const result: string[] = [];
     for await (const entry of walker(TMP_DIR, { yieldDirectories: true })) {
       if (entry.dirent.isDirectory()) result.push(entry.path);
     }
@@ -85,20 +85,20 @@ describe('fstream-walk', () => {
     const ac = new AbortController();
     const generator = walker(TMP_DIR, { signal: ac.signal });
 
-    const result = [];
+    const result: unknown[] = [];
     try {
       for await (const entry of generator) {
         result.push(entry);
         ac.abort(); // Cancel after first item
       }
-    } catch (err) {
+    } catch {
       // Some implementations might throw, ours just stops nicely or throws AbortError depending on timing
     }
     assert.strictEqual(result.length, 1);
   });
 
   test('should handle non-existent directory gracefully if errors suppressed', async () => {
-    const results = [];
+    const results: unknown[] = [];
     for await (const entry of walker('./invalid-ghost-dir', { suppressErrors: true })) {
       results.push(entry);
     }
@@ -108,11 +108,10 @@ describe('fstream-walk', () => {
   test('should throw error for non-existent directory if errors NOT suppressed', async () => {
     let errorThrown = false;
     try {
-      // eslint-disable-next-line no-unused-vars
-      for await (const entry of walker('./invalid-ghost-dir', { suppressErrors: false })) {
+      for await (const _entry of walker('./invalid-ghost-dir', { suppressErrors: false })) {
         // noop
       }
-    } catch (e) {
+    } catch {
       errorThrown = true;
     }
     assert.ok(errorThrown);
