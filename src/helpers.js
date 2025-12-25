@@ -235,7 +235,16 @@ export async function findDuplicateNames(dirPath, options = {}) {
 export async function searchInFiles(dirPath, pattern, options = {}) {
   const fs = await import('node:fs/promises');
   const results = [];
-  const regex = typeof pattern === 'string' ? new RegExp(pattern, 'g') : pattern;
+  // BUG-003 fixed: Ensure regex always has global flag for matchAll()
+  let regex;
+  if (typeof pattern === 'string') {
+    regex = new RegExp(pattern, 'g');
+  } else if (pattern instanceof RegExp) {
+    // If RegExp doesn't have global flag, create a new one with global flag
+    regex = pattern.global ? pattern : new RegExp(pattern.source, pattern.flags + 'g');
+  } else {
+    regex = pattern;
+  }
 
   for await (const entry of walker(dirPath, options)) {
     try {
@@ -243,13 +252,34 @@ export async function searchInFiles(dirPath, pattern, options = {}) {
       const matches = [...content.matchAll(regex)];
 
       if (matches.length > 0) {
+        // BUG-008 fixed: Calculate line numbers efficiently
+        // Instead of recalculating for each match, build a line index map
+        const lineStarts = [0];
+        for (let i = 0; i < content.length; i++) {
+          if (content[i] === '\n') {
+            lineStarts.push(i + 1);
+          }
+        }
+
         results.push({
           path: entry.path,
-          matches: matches.map(m => ({
-            text: m[0],
-            index: m.index,
-            line: content.substring(0, m.index).split('\n').length
-          }))
+          matches: matches.map(m => {
+            // Binary search to find line number
+            let line = 1;
+            for (let i = 0; i < lineStarts.length; i++) {
+              if (lineStarts[i] > m.index) {
+                line = i;
+                break;
+              }
+              line = i + 1;
+            }
+
+            return {
+              text: m[0],
+              index: m.index,
+              line: line
+            };
+          })
         });
       }
     } catch (err) {

@@ -23,6 +23,11 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
       if (visited.has(realPath)) return;
       visited.add(realPath);
     } catch (err) {
+      // BUG-002 fixed: If we can't resolve realpath, add original path to visited
+      // to prevent potential infinite loops with circular symlinks
+      if (visited.has(dirPath)) return;
+      visited.add(dirPath);
+
       // If we can't resolve path, proceed cautiously or skip based on policy
       if (!options.suppressErrors) throw err;
     }
@@ -39,20 +44,26 @@ export async function* walk(dirPath, options, currentDepth = 0, visited = new Se
   }
 
   try {
-    // Collect entries for optional sorting
-    const entries = [];
-    for await (const dirent of dirHandle) {
-      if (options.signal?.aborted) break;
-      entries.push(dirent);
-    }
-
-    // Apply sorting if requested
+    // BUG-001 fixed: Only collect entries into array if sorting is needed
+    // This saves memory for large directories when sorting is disabled
+    let entries;
     if (options.sort) {
+      // Collect all entries for sorting
+      entries = [];
+      for await (const dirent of dirHandle) {
+        if (options.signal?.aborted) break;
+        entries.push(dirent);
+      }
       sortEntries(entries, options.sort);
+    } else {
+      // For non-sorted iteration, create an async iterable wrapper
+      entries = {
+        [Symbol.asyncIterator]: () => dirHandle[Symbol.asyncIterator]()
+      };
     }
 
-    // Process sorted entries
-    for (const dirent of entries) {
+    // Process entries (sorted array or streaming)
+    for await (const dirent of entries) {
       if (options.signal?.aborted) break;
 
       const entryPath = joinPath(dirPath, dirent.name);
