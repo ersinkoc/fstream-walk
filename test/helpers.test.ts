@@ -11,7 +11,9 @@ import {
   findRecentFiles,
   buildTree,
   findDuplicateNames,
-  groupByExtension
+  groupByExtension,
+  findEmptyDirectories,
+  searchInFiles
 } from '../src/helpers.js';
 import type { ExtensionBreakdown } from '../src/helpers.js';
 
@@ -105,5 +107,102 @@ describe('Helper Functions', () => {
     assert.strictEqual(groups['.js'].length, 3);
     assert.strictEqual(groups['.txt'].length, 1);
     assert.strictEqual(groups['.md'].length, 1);
+  });
+
+  test('findEmptyDirectories should find empty dirs', async () => {
+    const emptyDir = path.join(TMP_DIR, 'empty-test-dir');
+    await fs.mkdir(emptyDir);
+
+    const emptyDirs = await findEmptyDirectories(TMP_DIR);
+    assert.ok(emptyDirs.some(d => d.includes('empty-test-dir')));
+
+    // Cleanup
+    await fs.rmdir(emptyDir);
+  });
+
+  test('findEmptyDirectories should not find non-empty dirs', async () => {
+    const emptyDirs = await findEmptyDirectories(TMP_DIR);
+    // subdir has files in it so should not be in the list
+    assert.ok(!emptyDirs.some(d => d.endsWith('subdir') && !d.includes('empty')));
+  });
+
+  test('searchInFiles should find text matches', async () => {
+    const results = await searchInFiles(TMP_DIR, 'content');
+    assert.ok(results.length > 0);
+    assert.ok(results.every(r => r.matches.length > 0));
+  });
+
+  test('searchInFiles should return correct line numbers', async () => {
+    // Create a file with multiple lines
+    const testFile = path.join(TMP_DIR, 'multiline.txt');
+    await fs.writeFile(testFile, 'line1\nline2 MATCH\nline3\nline4 MATCH');
+
+    const results = await searchInFiles(TMP_DIR, 'MATCH', { include: 'multiline.txt' });
+    assert.strictEqual(results.length, 1);
+    assert.strictEqual(results[0].matches.length, 2);
+    assert.strictEqual(results[0].matches[0].line, 2);
+    assert.strictEqual(results[0].matches[1].line, 4);
+
+    // Cleanup
+    await fs.unlink(testFile);
+  });
+
+  test('searchInFiles with string pattern should work', async () => {
+    const results = await searchInFiles(TMP_DIR, 'duplicate');
+    assert.strictEqual(results.length, 1);
+    assert.ok(results[0].path.includes('file1.js'));
+  });
+
+  test('findRecentFiles should accept Date object', async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recent = await findRecentFiles(TMP_DIR, yesterday);
+    assert.ok(recent.length > 0);
+  });
+
+  test('getLargestFiles should use default limit of 10', async () => {
+    const largest = await getLargestFiles(TMP_DIR);
+    assert.ok(largest.length <= 10);
+  });
+
+  test('calculateSize should return 0 averageSize for empty directory', async () => {
+    const emptyDir = path.join(TMP_DIR, 'empty-size-test');
+    await fs.mkdir(emptyDir);
+
+    const sizeInfo = await calculateSize(emptyDir);
+    assert.strictEqual(sizeInfo.fileCount, 0);
+    assert.strictEqual(sizeInfo.averageSize, 0);
+
+    await fs.rmdir(emptyDir);
+  });
+
+  test('buildTree should handle files without extension', async () => {
+    const noExtFile = path.join(TMP_DIR, 'noextension');
+    await fs.writeFile(noExtFile, 'no extension content');
+
+    const tree = await buildTree(TMP_DIR);
+    assert.ok('noextension' in tree);
+    assert.strictEqual(tree['noextension'], null);
+
+    await fs.unlink(noExtFile);
+  });
+
+  test('countFiles should handle files without extension', async () => {
+    const noExtFile = path.join(TMP_DIR, 'noextfile');
+    await fs.writeFile(noExtFile, 'content');
+
+    const breakdown = await countFiles(TMP_DIR, { byExtension: true }) as ExtensionBreakdown;
+    assert.ok(breakdown['[no extension]'] >= 1);
+
+    await fs.unlink(noExtFile);
+  });
+
+  test('groupByExtension should handle files without extension', async () => {
+    const noExtFile = path.join(TMP_DIR, 'noextgroupfile');
+    await fs.writeFile(noExtFile, 'content');
+
+    const groups = await groupByExtension(TMP_DIR);
+    assert.ok('[no extension]' in groups);
+
+    await fs.unlink(noExtFile);
   });
 });
